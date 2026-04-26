@@ -1,43 +1,70 @@
 import { NextResponse } from 'next/server';
 import { fetchStarterStoryVideos } from '../../../../services/apifyService';
 import { saveVideosToDB } from '../../../../services/videoStorageService';
+import { saveVideoSnapshots } from '../../../../services/videoSnapshotService';
+import { insertScrapingLog } from '../../../../services/logService';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Paso 1: Llamar a Apify
+    // 1. Fetch de Apify
     console.log('--- Iniciando Pipeline: Fetching de Apify ---');
     const data = await fetchStarterStoryVideos();
     const totalFetched = data?.length || 0;
 
     console.log(`[PIPELINE-TRACE] Data tipo: ${typeof data}, Es Array: ${Array.isArray(data)}`);
-    if (totalFetched > 0) {
-      console.log(`[PIPELINE-TRACE] Primer elemento ID: ${data[0].id || data[0].videoId}`);
-    }
 
     if (totalFetched === 0) {
+       // Registrar log incluso si está vacío
+       await insertScrapingLog({
+         run_type: 'manual',
+         total_fetched: 0,
+         inserted_count: 0,
+         skipped_count: 0,
+         snapshots_count: 0,
+         error_count: 0
+       });
+
        return NextResponse.json({
         success: true,
-        message: 'No se encontraron videos nuevos en Apify.',
+        message: 'No se encontraron videos en Apify.',
         total_fetched: 0,
         inserted: 0,
         skipped: 0,
+        snapshots_created: 0,
         errors: 0
       });
     }
 
-    // Paso 2, 3 y 4: Mapear, Insertar y Registrar Logs (Todo incluido en saveVideosToDB)
-    console.log(`--- Procesando ${totalFetched} videos hacia Supabase ---`);
-    const result = await saveVideosToDB(data, 'manual');
+    // 2. Guardar Videos (Deduplicación interna en saveVideosToDB)
+    console.log(`--- Paso 2: Guardando videos en DB (${totalFetched}) ---`);
+    const storageResult = await saveVideosToDB(data, 'manual');
 
-    // Paso 5: Retornar resumen del pipeline
+    // 3. Guardar Snapshots (SIEMPRE se crean)
+    console.log(`--- Paso 3: Creando snapshots para ${totalFetched} videos ---`);
+    const snapshotResult = await saveVideoSnapshots(data);
+
+    // 4. Registrar Logs de ejecución
+    const totalErrors = storageResult.errors + snapshotResult.errors;
+    console.log(`--- Paso 4: Registrando log de ejecución ---`);
+    await insertScrapingLog({
+      run_type: 'manual',
+      total_fetched: totalFetched,
+      inserted_count: storageResult.inserted,
+      skipped_count: storageResult.skipped,
+      snapshots_count: snapshotResult.snapshotsCreated,
+      error_count: totalErrors
+    });
+
+    // 5. Respuesta final
     return NextResponse.json({
       success: true,
       total_fetched: totalFetched,
-      inserted: result.inserted,
-      skipped: result.skipped,
-      errors: result.errors
+      inserted: storageResult.inserted,
+      skipped: storageResult.skipped,
+      snapshots_created: snapshotResult.snapshotsCreated,
+      errors: totalErrors
     });
 
   } catch (error: any) {
@@ -52,3 +79,4 @@ export async function GET() {
     );
   }
 }
+

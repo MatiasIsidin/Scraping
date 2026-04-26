@@ -75,16 +75,8 @@ export async function saveVideosToDB(videos: any[], runType: string = 'manual') 
 
   console.log(`[BINARY-AUDIT] AFTER_LOOP - ITERATED: ${ITERATED}, INSERT_ATTEMPTS: ${INSERT_ATTEMPTS}`);
 
-  // Log de Supabase opcional corregido para incluir estos datos si lo deseas
-  try {
-    await supabaseAdmin.from('scraping_logs').insert([{
-      run_type: runType,
-      total_fetched: EXPECTED,
-      inserted_count: inserted,
-      skipped_count: skipped,
-      error_count: errors
-    }]);
-  } catch (e) {}
+  // El log se delega al pipeline principal para incluir métricas de snapshots
+
 
   return { 
     EXPECTED, 
