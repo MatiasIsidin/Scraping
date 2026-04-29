@@ -1,4 +1,4 @@
-export async function fetchStarterStoryVideos() {
+export async function fetchStarterStoryVideos(maxResults: number = 20) {
   const API_TOKEN = process.env.APIFY_API_TOKEN;
 
   if (!API_TOKEN) {
@@ -9,7 +9,7 @@ export async function fetchStarterStoryVideos() {
 
   const payload = {
     startUrls: [{ url: 'https://www.youtube.com/@starterstory' }],
-    maxResults: 20,
+    maxResults: maxResults,
     maxResultsShorts: 0,
     downloadSubtitles: false,
     saveSnapshots: false

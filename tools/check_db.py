@@ -13,10 +13,13 @@ def check_db():
 
     supabase = create_client(url, key)
     try:
-        res = supabase.table("videos").select("youtube_video_id,transcript,transcript_source").limit(5).execute()
+        # Consultamos videos unidos a sus transcripciones
+        res = supabase.table("videos").select("youtube_video_id, title, transcripts(source, word_count)").limit(5).execute()
         print("Conexión exitosa. Datos encontrados:")
         for row in res.data:
-            print(f"ID: {row.get('youtube_video_id')} | Source: {row.get('transcript_source')}")
+            trans = row.get('transcripts', [])
+            source = trans[0].get('source') if trans else "N/A"
+            print(f"ID: {row.get('youtube_video_id')} | Title: {row.get('title')[:30]} | Source: {source}")
     except Exception as e:
         print(f"Error al consultar la tabla: {str(e)}")
 

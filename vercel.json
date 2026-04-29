@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/run-incremental-scraper?run_type=weekly_cron&threshold=5&limit=50",
+      "schedule": "0 3 * * 0"
+    }
+  ]
+}

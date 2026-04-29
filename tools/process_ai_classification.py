@@ -118,8 +118,9 @@ def main():
 
     # Buscar Raw Videos
     try:
-        # Petición Batch de Seguridad 100 (El Fetcher y la Arquitectura manejan los límites grandes)
-        raw_res = supabase.table("raw_videos").select("youtube_video_id, title, description, transcript").limit(100).execute()
+        # Petición Batch de Seguridad 100
+        # Usamos JOIN con la tabla 'transcripts' para obtener el contenido
+        raw_res = supabase.table("videos").select("youtube_video_id, title, description, transcripts(transcript)").limit(100).execute()
         all_raw = raw_res.data
     except Exception as e:
         logger.error(f"Caída extrayendo lista de raw_videos a inferir: {e}")
@@ -141,7 +142,10 @@ def main():
     # 3. PROCESAMIENTO LINEAL / INFERENCIA SEGREGADA 
     for video in to_process:
         vid_id = video["youtube_video_id"]
-        transcript = video.get("transcript", "")
+        
+        # Extraer transcript de la relación (lista devuelta por el join)
+        transcript_list = video.get("transcripts", [])
+        transcript = transcript_list[0].get("transcript", "") if transcript_list else ""
         
         # SOP Constraint Edge Case: Evitar gastos absurdos en video vació pero firmarlo procesado
         if not transcript or str(transcript).strip() == "":

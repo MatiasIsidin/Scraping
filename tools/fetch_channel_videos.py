@@ -75,6 +75,7 @@ def upsert_to_supabase(supabase: Client, items: list):
         return
 
     raw_videos = []
+    transcripts = []
     snapshots = []
     
     logger.info("Procesando payloads para segregación de capas (Raw Data & Snapshots)")
@@ -102,8 +103,19 @@ def upsert_to_supabase(supabase: Client, items: list):
             "description": item.get("description", ""),
             "url": item.get("url", f"https://www.youtube.com/watch?v={video_id}"),
             "published_at": published_at,
-            "transcript": transcript
+            "transcript": transcript # Mantenemos por compatibilidad per SOP 5
         })
+
+        # Tabla de Transcripciones (Nueva Arquitectura)
+        if transcript:
+            transcripts.append({
+                "youtube_video_id": video_id,
+                "transcript": transcript,
+                "source": "apify",
+                "language": "en", # Default
+                "word_count": len(transcript.split()),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
         
         # 3. SOP Edge Case: Limpieza a integer base 0 para métricas ausentes
         def safe_int(val):
@@ -128,9 +140,15 @@ def upsert_to_supabase(supabase: Client, items: list):
         
         logger.info(f"Intentando transacción Transaccional de Bloque {i//batch_size + 1}: ({len(raw_batch)} videos físicos)")
         try:
-            # Upsert crudo (Usa on_conflict base primary key automático de PostgREST)
-            supabase.table("raw_videos").upsert(raw_batch).execute()
+            # Upsert en videos (antes raw_videos)
+            supabase.table("videos").upsert(raw_batch).execute()
             
+            # Upsert en transcripts
+            if transcripts:
+                trans_batch = [t for t in transcripts if t["youtube_video_id"] in [rv["youtube_video_id"] for rv in raw_batch]]
+                if trans_batch:
+                    supabase.table("transcripts").upsert(trans_batch).execute()
+
             # Recordar historial snapshot con Insert simple
             supabase.table("video_snapshots").insert(snap_batch).execute()
             

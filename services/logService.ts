@@ -4,9 +4,12 @@ export interface ScrapingLog {
   run_type: string;
   total_fetched: number;
   inserted_count: number;
-  skipped_count: number;
-  snapshots_count: number;
+  skipped_count?: number;
+  snapshots_count?: number;
+  transcripts_count?: number;
   error_count: number;
+  scraper_version?: string;
+  metadata?: any;
 }
 
 /**
@@ -14,16 +17,25 @@ export interface ScrapingLog {
  */
 export async function insertScrapingLog(logData: ScrapingLog) {
   try {
+    // Consolidar metadata extra en error_details para trazabilidad sin cambiar esquema
+    const details = {
+      skipped: logData.skipped_count || 0,
+      snapshots: logData.snapshots_count || 0,
+      transcripts: logData.transcripts_count || 0,
+      version: logData.scraper_version || 'v1',
+      ...(logData.metadata || {})
+    };
+
     const { error } = await supabaseAdmin
       .from('scraping_logs')
       .insert([
         {
           run_type: logData.run_type,
-          total_fetched: logData.total_fetched,
-          inserted_count: logData.inserted_count,
-          skipped_count: logData.skipped_count,
-          snapshots_count: logData.snapshots_count,
-          error_count: logData.error_count,
+          videos_found: logData.total_fetched,
+          new_videos: logData.inserted_count,
+          errors_count: logData.error_count,
+          status: logData.error_count > 0 ? 'error' : 'success',
+          error_details: JSON.stringify(details),
           executed_at: new Date().toISOString()
         }
       ]);
