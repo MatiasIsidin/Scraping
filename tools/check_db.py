@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 load_dotenv(".env.local")
 
 def check_db():
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_KEY")
+    url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
     if not url or not key:
-        print("Faltan credenciales de Supabase en .env.local")
+        print("Faltan credenciales de Supabase (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)")
         return
 
     supabase = create_client(url, key)

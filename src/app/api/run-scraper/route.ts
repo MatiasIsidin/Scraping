@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchStarterStoryVideos } from '../../../../services/apifyService';
 import { saveVideosToDB } from '../../../../services/videoStorageService';
 import { saveVideoSnapshots } from '../../../../services/videoSnapshotService';
-import { insertScrapingLog } from '../../../../services/logService';
+import { logScrapingExecution } from '../../../../services/logService';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,13 +17,15 @@ export async function GET() {
 
     if (totalFetched === 0) {
        // Registrar log incluso si está vacío
-       await insertScrapingLog({
+       await logScrapingExecution({
          run_type: 'manual',
-         total_fetched: 0,
-         inserted_count: 0,
-         skipped_count: 0,
-         snapshots_count: 0,
-         error_count: 0
+         status: 'success',
+         source: 'apify_direct',
+         videos_found: 0,
+         new_videos: 0,
+         skipped_existing: 0,
+         snapshots_created: 0,
+         errors_count: 0
        });
 
        return NextResponse.json({
@@ -48,13 +50,15 @@ export async function GET() {
     // 4. Registrar Logs de ejecución
     const totalErrors = storageResult.errors + snapshotResult.errors;
     console.log(`--- Paso 4: Registrando log de ejecución ---`);
-    await insertScrapingLog({
+    await logScrapingExecution({
       run_type: 'manual',
-      total_fetched: totalFetched,
-      inserted_count: storageResult.inserted,
-      skipped_count: storageResult.skipped,
-      snapshots_count: snapshotResult.snapshotsCreated,
-      error_count: totalErrors
+      status: totalErrors > 0 ? 'partial' : 'success',
+      source: 'apify_direct',
+      videos_found: totalFetched,
+      new_videos: storageResult.inserted,
+      skipped_existing: storageResult.skipped,
+      snapshots_created: snapshotResult.snapshotsCreated,
+      errors_count: totalErrors
     });
 
     // 5. Respuesta final

@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@lib/supabaseClient';
 import { getTranscriptWithFallback } from './apifyTranscriptService';
-import { insertScrapingLog } from './logService';
+import { logScrapingExecution } from './logService';
 
 /**
  * SERVICIO DE BACKFILL PARA TRANSCRIPCIONES (Auditado y Corregido)
@@ -86,13 +86,18 @@ export async function runTranscriptBackfill(batchSize: number = 10) {
     // 3. LOGGING FINAL
     console.log(`[BACKFILL] PROCESSED_COUNT: ${stats.processed_count}`);
     
-    await insertScrapingLog({
+    await logScrapingExecution({
       run_type: 'transcript_backfill',
-      total_fetched: stats.pending_total, // Guardamos el universo total detectado
-      inserted_count: stats.inserted,     // Cuántos logramos insertar en este batch
-      skipped_count: stats.checked,       // Cuántos intentamos en este batch (reutilizado)
-      snapshots_count: stats.fallback_used,
-      error_count: stats.errors
+      status: stats.errors > 0 ? 'partial' : 'success',
+      source: 'database_pending',
+      videos_found: stats.pending_total,
+      new_videos: 0,
+      skipped_existing: 0,
+      transcripts_created: stats.inserted,
+      fallback_used: stats.fallback_used,
+      snapshots_created: 0,
+      errors_count: stats.errors,
+      error_details: { checked_batch_size: stats.checked }
     });
 
     return stats;

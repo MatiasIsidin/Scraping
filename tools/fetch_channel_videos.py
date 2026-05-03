@@ -16,8 +16,8 @@ load_dotenv()
 
 # --- Configuración & Environment Variables ---
 APIFY_TOKEN = os.getenv("APIFY_API_TOKEN")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
 
 APIFY_ACTOR = "apify/youtube-scraper" # Placeholder exacto de Apify a utilizar
 CHANNEL_URL = "https://www.youtube.com/@StarterStory"

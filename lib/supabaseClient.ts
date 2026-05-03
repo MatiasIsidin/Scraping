@@ -3,9 +3,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // --- CONFIGURACIÓN DE ENTORNO SEGURA ---
 const getEnv = (name: string) => (typeof process !== 'undefined' ? process.env[name] : '') || '';
 
-const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL') || getEnv('SUPABASE_URL');
-const supabaseAnonKey = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY');
-const supabaseServiceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('SUPABASE_KEY');
+const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseAnonKey = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+const supabaseServiceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
 
 /**
  * Crea un cliente de Supabase de forma segura.

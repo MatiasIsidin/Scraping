@@ -3,7 +3,7 @@ import { fetchStarterStoryVideos } from './apifyService';
 import { mapApifyVideoToDB } from './videoStorageService';
 import { saveVideoSnapshots } from './videoSnapshotService';
 import { getTranscriptWithFallback } from './apifyTranscriptService';
-import { insertScrapingLog } from './logService';
+import { logScrapingExecution } from './logService';
 
 export const SCRAPER_VERSION = "v2_incremental";
 const DEFAULT_THRESHOLD = 5;
@@ -105,15 +105,19 @@ export async function runIncrementalScrape(
     }
 
     // 6. Registrar Log de Ejecución
-    await insertScrapingLog({
+    await logScrapingExecution({
       run_type: runType,
-      total_fetched: stats.total_fetched,
-      inserted_count: stats.inserted_count,
-      skipped_count: stats.skipped_existing,
-      snapshots_count: stats.snapshots_created,
-      transcripts_count: stats.transcripts_created,
-      error_count: stats.errors,
-      scraper_version: SCRAPER_VERSION
+      scraper_version: SCRAPER_VERSION,
+      status: stats.errors > 0 ? 'partial' : 'success',
+      source: 'apify_incremental',
+      videos_found: stats.total_fetched,
+      new_videos: stats.inserted_count,
+      skipped_existing: stats.skipped_existing,
+      transcripts_created: stats.transcripts_created,
+      fallback_used: stats.fallback_used,
+      snapshots_created: stats.snapshots_created,
+      errors_count: stats.errors,
+      error_details: { early_stop_triggered: stats.early_stop_triggered }
     });
 
     console.log(`[INCREMENTAL] Finalizado: ${stats.inserted_count} nuevos, ${stats.skipped_existing} omitidos.`);

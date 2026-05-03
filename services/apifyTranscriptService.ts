@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@lib/supabaseClient';
 import { fetchAssemblyAiFallback } from './assemblyAiFallbackService';
-import { insertScrapingLog } from './logService';
+import { logScrapingExecution } from './logService';
 
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 
@@ -52,7 +52,9 @@ export async function saveTranscriptToDB(data: {
   youtube_video_id: string, 
   transcript: string, 
   source: string,
-  language?: string 
+  language?: string,
+  status?: string,
+  retry_count?: number
 }) {
   if (!data.youtube_video_id) {
     return { success: false, error: "youtube_video_id no proporcionado" };
@@ -73,6 +75,8 @@ export async function saveTranscriptToDB(data: {
         source: data.source,
         language: data.language || 'en',
         word_count: wordCount,
+        status: data.status || 'success',
+        retry_count: data.retry_count || 0,
         created_at: new Date().toISOString()
       }, {
         onConflict: 'youtube_video_id,source'
@@ -174,13 +178,26 @@ export async function getTranscriptWithFallback(videoUrl: string, videoId: strin
       // 4. MANEJO DE CASO DOBLE FALLA
       console.error(`[TRANSCRIPT-CRITICAL] Ambos métodos fallaron para ${videoId}.`);
       
-      await insertScrapingLog({
+      await logScrapingExecution({
         run_type: 'transcript_fallback_error',
-        total_fetched: 1,
-        inserted_count: 0,
-        skipped_count: 0,
-        snapshots_count: 0,
-        error_count: 1
+        status: 'error',
+        source: 'assemblyai_fallback',
+        videos_found: 1,
+        new_videos: 0,
+        skipped_existing: 0,
+        transcripts_created: 0,
+        fallback_used: 1,
+        snapshots_created: 0,
+        errors_count: 1,
+        error_details: { video_id: videoId, message: `Doble falla. Apify: ${apifyResult.error}, Fallback: ${fallbackResult.message}` }
+      });
+
+      // Crear o actualizar la entrada como 'failed' para poder reintentarla luego
+      await saveTranscriptToDB({
+        youtube_video_id: videoId,
+        transcript: '',
+        source: 'none',
+        status: 'failed'
       });
 
       return { 
@@ -197,7 +214,8 @@ export async function getTranscriptWithFallback(videoUrl: string, videoId: strin
     youtube_video_id: videoId,
     transcript: finalTranscript,
     source: source,
-    language: 'en' // Default por ahora
+    language: 'en',
+    status: 'success'
   };
 
   const dbResult = await saveTranscriptToDB(finalData);

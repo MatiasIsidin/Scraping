@@ -1,42 +1,54 @@
 import { supabaseAdmin } from '@lib/supabaseClient';
 
-export interface ScrapingLog {
+export interface ScrapingExecutionLog {
   run_type: string;
-  total_fetched: number;
-  inserted_count: number;
-  skipped_count?: number;
-  snapshots_count?: number;
-  transcripts_count?: number;
-  error_count: number;
   scraper_version?: string;
-  metadata?: any;
+  status: 'success' | 'error' | 'partial';
+  source?: string;
+  videos_found?: number;
+  new_videos?: number;
+  skipped_existing?: number;
+  transcripts_created?: number;
+  fallback_used?: number;
+  snapshots_created?: number;
+  errors_count?: number;
+  error_details?: any;
+  execution_time_seconds?: number;
+  api_calls_estimated?: number;
 }
 
 /**
- * Registra el resultado de una ejecución de scraping en la tabla scraping_logs.
+ * Standardized function to log any scraping pipeline execution
+ * with full traceability.
  */
-export async function insertScrapingLog(logData: ScrapingLog) {
+export async function logScrapingExecution(logData: ScrapingExecutionLog) {
   try {
-    // Consolidar metadata extra en error_details para trazabilidad sin cambiar esquema
-    const details = {
-      skipped: logData.skipped_count || 0,
-      snapshots: logData.snapshots_count || 0,
-      transcripts: logData.transcripts_count || 0,
-      version: logData.scraper_version || 'v1',
-      ...(logData.metadata || {})
-    };
+    const version = process.env.SCRAPER_VERSION || logData.scraper_version || 'v2_unknown';
+
+    // Manejo de error_details, convirtiendo a string si es objeto y agregando fallback por si acaso
+    const errorDetailsPayload = typeof logData.error_details === 'object' 
+      ? JSON.stringify(logData.error_details) 
+      : logData.error_details;
 
     const { error } = await supabaseAdmin
       .from('scraping_logs')
       .insert([
         {
           run_type: logData.run_type,
-          videos_found: logData.total_fetched,
-          new_videos: logData.inserted_count,
-          errors_count: logData.error_count,
-          status: logData.error_count > 0 ? 'error' : 'success',
-          error_details: JSON.stringify(details),
-          executed_at: new Date().toISOString()
+          scraper_version: version,
+          status: logData.status,
+          source: logData.source || 'unknown',
+          videos_found: logData.videos_found || 0,
+          new_videos: logData.new_videos || 0,
+          skipped_existing: logData.skipped_existing || 0,
+          transcripts_created: logData.transcripts_created || 0,
+          fallback_used: logData.fallback_used || 0,
+          snapshots_created: logData.snapshots_created || 0,
+          errors_count: logData.errors_count || 0,
+          error_details: errorDetailsPayload,
+          execution_time_seconds: logData.execution_time_seconds || 0,
+          api_calls_estimated: logData.api_calls_estimated || 0,
+          executed_at: new Date().toISOString() // Assuming the table still uses executed_at or we map it if needed, or let Supabase handle created_at
         }
       ]);
 

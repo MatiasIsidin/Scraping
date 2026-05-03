@@ -2,7 +2,7 @@ import modal
 import os
 
 # 1. Definir la infraestructura
-image = modal.Image.debian_slim().pip_install("assemblyai", "yt-dlp")
+image = modal.Image.debian_slim().pip_install("assemblyai", "yt-dlp", "fastapi[standard]")
 app = modal.App("assemblyai-transcript-fallback")
 
 @app.function(
@@ -55,5 +55,5 @@ def web_transcribe(data: dict):
     if not video_url:
         return {"error": "Missing videoUrl"}, 400
     
-    # Ejecución sincrónica desde el punto de vista del webhook
-    return transcribe_video.local(video_url)
+    # Ejecución remota en Modal para aprovechar la configuración de la función transcribe_video
+    return transcribe_video.remote(video_url)
