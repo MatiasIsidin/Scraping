@@ -12,7 +12,7 @@ export async function GET() {
       .eq('schemaname', 'public');
     
     // Si lo anterior falla (que es probable por permisos), intentamos un listado manual
-    const knownTables = ['videos', 'transcripts', 'scraping_logs', 'video_snapshots', 'latam_classification', 'raw_videos'];
+    const knownTables = ['videos', 'transcripts', 'scraping_logs', 'video_snapshots', 'pain_points', 'pain_point_sources'];
     const results: any = {};
 
     for (const table of knownTables) {

@@ -3,8 +3,24 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Si se pide modo raw, devolver las filas directamente para el dashboard
+    const { searchParams } = new URL(request.url);
+    const mode = searchParams.get('mode');
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    if (mode === 'raw') {
+      const { data, error } = await supabaseAdmin
+        .from('scraping_logs')
+        .select('*')
+        .order('executed_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, data, total: data?.length || 0 });
+    }
+
     const results: any = {};
 
     // Total logs
