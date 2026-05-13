@@ -1,0 +1,173 @@
+/* ============================================================
+   RPM WIZARD — Design System & Utility Tokens
+   ============================================================ */
+
+:root {
+  --rpm-primary: #6366f1;
+  --rpm-secondary: #a855f7;
+  --rpm-accent: #ec4899;
+  --rpm-bg: #0f172a;
+  --rpm-card: #1e293b;
+  --rpm-text: #f8fafc;
+  --rpm-muted: #94a3b8;
+  --rpm-glass: rgba(30, 41, 59, 0.7);
+}
+
+.rpm-wizard-container {
+  max-width: 100%;
+  margin: 0;
+  padding: 2rem;
+  background: transparent;
+  border-radius: 20px;
+  border: none;
+  box-shadow: none;
+  color: var(--rpm-text);
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.rpm-wizard-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.rpm-progress-bar {
+  height: 6px;
+  background: #334155;
+  border-radius: 3px;
+  margin-bottom: 3rem;
+  overflow: hidden;
+}
+
+.rpm-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--rpm-primary), var(--rpm-secondary));
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rpm-step-header {
+  margin-bottom: 2rem;
+}
+
+.rpm-step-title {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.rpm-step-description {
+  color: var(--rpm-muted);
+  line-height: 1.6;
+}
+
+.rpm-form-group {
+  margin-bottom: 1.5rem;
+}
+
+.rpm-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #e2e8f0;
+}
+
+.rpm-input, .rpm-textarea, .rpm-select {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1rem;
+  color: white;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.rpm-input:focus, .rpm-textarea:focus {
+  border-color: var(--rpm-primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+.rpm-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.rpm-option-card {
+  background: var(--rpm-card);
+  border: 2px solid transparent;
+  padding: 1.25rem;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.rpm-option-card:hover {
+  background: #334155;
+  transform: translateY(-2px);
+}
+
+.rpm-option-card.selected {
+  border-color: var(--rpm-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.rpm-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #334155;
+}
+
+.rpm-btn {
+  padding: 0.875rem 2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.rpm-btn-primary {
+  background: linear-gradient(135deg, var(--rpm-primary), var(--rpm-secondary));
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+}
+
+.rpm-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
+}
+
+.rpm-btn-secondary {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.rpm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rpm-step-content {
+  animation: fadeIn 0.4s ease-out;
+}

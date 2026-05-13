@@ -5,7 +5,10 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/pain-points
- * Devuelve todos los pain points activos ordenados por composite_score.
+ * Devuelve todos los pain points activos ordenados por final_score.
+ * Schema real: pain_points (id, title, description, category, market_segment,
+ *   severity_score, frequency_score, recency_score, final_score, version,
+ *   video_id, is_active, created_at, updated_at)
  */
 export async function GET(request: Request) {
   try {
@@ -17,7 +20,8 @@ export async function GET(request: Request) {
       .from('pain_points')
       .select('*')
       .eq('is_active', true)
-      .order('composite_score', { ascending: false })
+      .order('final_score', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (category) {

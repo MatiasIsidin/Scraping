@@ -144,5 +144,21 @@ export async function runLatamEnrichmentBatch(config: EnrichmentConfig): Promise
   // Calculate estimated cost
   stats.total_cost_usd = (stats.total_input_tokens * 0.00000015) + (stats.total_output_tokens * 0.0000006);
 
+  // Log enrichment run to extraction_logs for full IA traceability
+  try {
+    await supabaseAdmin.from('extraction_logs').insert({
+      video_id: `enrichment_batch_${stats.pain_points_enriched}_pps`,
+      model_used: stats.model_used,
+      tokens_used: stats.total_input_tokens + stats.total_output_tokens,
+      cost_estimated: stats.total_cost_usd,
+      status: stats.errors === 0 ? 'success' : 'partial',
+      error_message: stats.errors > 0
+        ? JSON.stringify({ run_id: stats.run_id, errors: stats.error_details })
+        : null
+    });
+  } catch (logErr: any) {
+    console.error('[ENRICHMENT] Failed to log to extraction_logs:', logErr.message);
+  }
+
   return stats;
 }

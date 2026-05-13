@@ -8,13 +8,25 @@ export async function GET() {
       { count: totalTranscripts },
       { count: totalPainPoints },
       { count: totalSources },
-      { data: lastLog }
+      lastLogRes,
+      { count: totalClassifications },
+      recentClassificationsRes
     ] = await Promise.all([
       supabaseAdmin.from('videos').select('*', { count: 'exact', head: true }),
       supabaseAdmin.from('transcripts').select('*', { count: 'exact', head: true }).eq('status', 'success'),
       supabaseAdmin.from('pain_points').select('*', { count: 'exact', head: true }),
       supabaseAdmin.from('pain_point_sources').select('*', { count: 'exact', head: true }),
-      supabaseAdmin.from('scraping_logs').select('executed_at').order('executed_at', { ascending: false }).limit(1).single()
+      supabaseAdmin.from('scraping_logs').select('executed_at').order('executed_at', { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from('video_classifications').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('video_classifications')
+        .select(`
+          relevance_score,
+          reasoning,
+          videos(title),
+          pain_points(title)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(3)
     ]);
 
     // Severity average calculation
@@ -31,7 +43,9 @@ export async function GET() {
       totalSources: totalSources || 0,
       successRate: totalVideos ? ((totalTranscripts || 0) / totalVideos) * 100 : 0,
       avgSeverity: Math.round(avgSeverity * 10) / 10,
-      lastExecution: lastLog?.executed_at || null
+      lastExecution: lastLogRes.data?.executed_at || null,
+      totalClassifications: totalClassifications || 0,
+      recentClassifications: recentClassificationsRes.data || []
     });
   } catch (error: unknown) {
     console.error('Error fetching dashboard stats:', error);

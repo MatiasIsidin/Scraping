@@ -201,20 +201,21 @@ export async function runPainPointExtractionBatch(config: ExtractionConfig): Pro
       }
     }
 
-    // Logging to scraping_logs
+    // Logging to extraction_logs (dedicated IA pipeline table)
     const duration = (Date.now() - startTime) / 1000;
     stats.total_cost_usd = (stats.total_input_tokens * 0.00000015) + (stats.total_output_tokens * 0.0000006);
 
     if (!config.dryRun) {
-      await supabaseAdmin.from('scraping_logs').insert({
-        run_type: 'pain_point_extraction_strict',
-        videos_found: stats.transcripts_processed,
-        new_videos: stats.pain_points_inserted,
-        errors_count: stats.errors,
+      // Log one summary entry per batch run
+      await supabaseAdmin.from('extraction_logs').insert({
+        video_id: `batch_${stats.transcripts_processed}_videos`,
+        model_used: stats.model_used,
+        tokens_used: stats.total_input_tokens + stats.total_output_tokens,
+        cost_estimated: stats.total_cost_usd,
         status: stats.errors === 0 ? 'success' : 'partial',
-        error_details: { stats, run_id: runId },
-        execution_time_seconds: duration,
-        source: 'IA-Pipeline-V3.2'
+        error_message: stats.errors > 0
+          ? JSON.stringify({ run_id: runId, errors: stats.error_details, duration_s: duration })
+          : null
       });
     }
 

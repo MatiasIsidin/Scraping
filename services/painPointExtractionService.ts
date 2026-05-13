@@ -485,20 +485,21 @@ export async function runPainPointExtractionBatch(
     // 8. Estimar costo
     stats.estimated_cost_usd = estimateCost(stats.total_input_tokens, stats.total_output_tokens, stats.model_used);
 
-    // 9. Registrar log de extracción
+    // 9. Registrar log de extracción en extraction_logs (schema real de producción)
     await supabaseAdmin.from('extraction_logs').insert({
-      pipeline_type: 'pain_point_extraction',
+      video_id: `batch_${stats.transcripts_processed}_videos`,
       model_used: stats.model_used,
-      transcripts_processed: stats.transcripts_processed,
-      pain_points_extracted: stats.pain_points_extracted,
-      pain_points_deduplicated: stats.pain_points_deduplicated,
-      sources_created: stats.sources_created,
-      total_input_tokens: stats.total_input_tokens,
-      total_output_tokens: stats.total_output_tokens,
-      estimated_cost_usd: stats.estimated_cost_usd,
+      tokens_used: stats.total_input_tokens + stats.total_output_tokens,
+      cost_estimated: stats.estimated_cost_usd,
       status: stats.errors > 0 ? 'partial' : 'success',
-      error_details: stats.errors > 0 ? { errors_count: stats.errors } : {},
-      extraction_version: extractionVersion
+      error_message: stats.errors > 0
+        ? JSON.stringify({
+            errors_count: stats.errors,
+            extracted: stats.pain_points_extracted,
+            deduplicated: stats.pain_points_deduplicated,
+            version: extractionVersion
+          })
+        : null
     });
 
     console.log(`[PP-BATCH] Finalizado. Extraídos: ${stats.pain_points_extracted}, Dedup: ${stats.pain_points_deduplicated}, Errores: ${stats.errors}`);
