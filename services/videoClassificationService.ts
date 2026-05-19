@@ -55,7 +55,7 @@ export class VideoClassificationService {
           videos!inner(title)
         `)
         .eq('status', 'success')
-        .order('updated_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (fetchErr) throw fetchErr;
 
@@ -115,17 +115,22 @@ export class VideoClassificationService {
 
           if (classRes.success) {
             for (const c of classRes.parsed.classifications) {
-              await supabaseAdmin.from('video_classifications').upsert({
+              const { error: classErr } = await supabaseAdmin.from('video_classifications').upsert({
                 youtube_video_id: videoId,
                 pain_point_id: c.pain_point_id,
                 analysis_id: newAna.id,
                 classification_version: this.VERSION,
-                business_model: ba.business_model,
+                // business_model: ba.business_model, // Temporarily disabled to test schema cache
                 latam_relevance_score: c.relevance_score,
                 confidence_score: c.confidence_score,
                 reasoning: c.reasoning
               }, { onConflict: 'youtube_video_id, pain_point_id, classification_version' });
-              stats.classifications_created++;
+              
+              if (classErr) {
+                stats.errors.push(`VC-UPSERT-${videoId}: ${classErr.message}`);
+              } else {
+                stats.classifications_created++;
+              }
             }
           }
 
@@ -138,12 +143,46 @@ export class VideoClassificationService {
       }
 
       stats.estimated_cost = (stats.total_tokens / 1000000) * 0.20;
+
+      // 4. Registrar en extraction_logs
+      await supabaseAdmin.from('extraction_logs').insert({
+        video_id: `batch_${this.VERSION}_${new Date().getTime()}`,
+        model_used: this.MODEL,
+        tokens_used: stats.total_tokens,
+        cost_estimated: stats.estimated_cost,
+        status: stats.errors.length > 0 ? 'partial' : 'success',
+        error_message: stats.errors.length > 0 ? JSON.stringify(stats.errors) : null
+      });
+
       return stats;
 
     } catch (err: any) {
       stats.errors.push(`Fatal: ${err.message}`);
       return stats;
     }
+  }
+
+  /**
+   * RE-CLASIFICACIÓN DINÁMICA
+   * Se ejecuta cuando cambian los pain points o criterios.
+   * Invalida versiones previas y permite reprocesar.
+   */
+  async triggerDynamicReclassification(videoId?: string) {
+    console.log(`[CLASSIFIER] Iniciando re-clasificación dinámica...`);
+    
+    // Si hay un videoId específico, solo invalidamos ese
+    if (videoId) {
+      await supabaseAdmin
+        .from('video_classifications')
+        .delete()
+        .eq('youtube_video_id', videoId)
+        .eq('classification_version', this.VERSION);
+      
+      return this.runBatchClassification(1);
+    }
+
+    // Por defecto, podríamos invalidar un lote pequeño para probar
+    return this.runBatchClassification(5);
   }
 }
 
