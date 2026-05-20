@@ -175,7 +175,7 @@ export default function PainPointsPage() {
           // Parsing classifications using the new relational table from Sprint 4
           const latamReasoning = pp.video_classifications && pp.video_classifications.length > 0
             ? pp.video_classifications[0].reasoning
-            : 'Applicabilidad a verificar.';
+            : (pp.pain_point_sources?.find(s => s.source_type === 'report' || s.country === 'LATAM')?.evidence || 'Applicabilidad a verificar.');
 
           return (
             <div 
