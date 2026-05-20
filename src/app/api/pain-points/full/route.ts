@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // 1. Fetch pain points with sources
     let query = supabaseAdmin
       .from('pain_points')
-      .select('*, pain_point_sources!fk_pain_point(*)', { count: 'exact' })
+      .select('*, pain_point_sources!fk_pain_point(*), video_classifications(*)', { count: 'exact' })
       .order('final_score', { ascending: false })
       .range(from, to);
 

@@ -27,6 +27,9 @@ interface FullPainPoint extends PainPoint {
     title: string;
     youtube_video_id: string;
   };
+  video_classifications?: {
+    reasoning: string;
+  }[];
   latam_classification?: any[];
   business_type?: string;
 }
@@ -169,10 +172,10 @@ export default function PainPointsPage() {
             <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No se encontraron insights.</p>
           </div>
         ) : painPoints.map((pp) => {
-          // Parsing classifications based on available fields to keep real logic
-          const latamClass = pp.latam_classification && pp.latam_classification.length > 0 
-            ? pp.latam_classification 
-            : [{ category: 'Contexto General', pain_point: 'Applicabilidad a verificar.' }];
+          // Parsing classifications using the new relational table from Sprint 4
+          const latamReasoning = pp.video_classifications && pp.video_classifications.length > 0
+            ? pp.video_classifications[0].reasoning
+            : 'Applicabilidad a verificar.';
 
           return (
             <div 
@@ -278,7 +281,7 @@ export default function PainPointsPage() {
                       <Globe2 size={14} /> Aplicabilidad LATAM (Razonamiento IA)
                     </h5>
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      {latamClass[0]?.pain_point || 'En LATAM abundan pymes y microempresas con equipos reducidos y alta carga operativa manual. La presión por hacer más con menos hace que la automatización sea una necesidad concreta y no solo una mejora opcional.'}
+                      {latamReasoning}
                     </p>
                   </div>
 
