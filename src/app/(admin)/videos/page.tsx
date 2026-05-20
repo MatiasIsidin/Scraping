@@ -111,30 +111,56 @@ export default function VideosPage() {
 
       {/* Batch Stats Banner */}
       {batchStats && (
-        <div className="glass-card p-6 border-emerald-500/30 bg-emerald-500/5">
-          <div className="flex items-center gap-4 mb-4">
-            <Activity className="text-emerald-400" size={24} />
-            <h3 className="font-bold text-white text-lg">Procesamiento Batch Completado</h3>
+        batchStats.status === 'no_new_videos' ? (
+          <div className="glass-card p-6 border-indigo-500/30 bg-indigo-500/5">
+            <div className="flex items-center gap-4 mb-4">
+              <CheckCircle2 className="text-indigo-400" size={24} />
+              <h3 className="font-bold text-white text-lg">No hay videos nuevos para analizar</h3>
+            </div>
+            <p className="text-slate-400 text-sm mb-6 max-w-2xl leading-relaxed">
+              {batchStats.message} El sistema de deduplicación evitó el reprocesamiento innecesario.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total DB</p>
+                <p className="text-2xl font-black text-white">{batchStats.total_videos}</p>
+              </div>
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Ya Procesados</p>
+                <p className="text-2xl font-black text-emerald-400">{batchStats.transcripts_skipped}</p>
+              </div>
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nuevos/Elegibles</p>
+                <p className="text-2xl font-black text-indigo-400">{batchStats.eligible_videos}</p>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Procesados</p>
-              <p className="text-2xl font-black text-white">{batchStats.transcripts_processed}</p>
+        ) : (
+          <div className="glass-card p-6 border-emerald-500/30 bg-emerald-500/5">
+            <div className="flex items-center gap-4 mb-4">
+              <Activity className="text-emerald-400" size={24} />
+              <h3 className="font-bold text-white text-lg">Procesamiento Batch Completado</h3>
             </div>
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Insights Nuevos</p>
-              <p className="text-2xl font-black text-emerald-400">{batchStats.pain_points_extracted}</p>
-            </div>
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Deduplicados</p>
-              <p className="text-2xl font-black text-amber-400">{batchStats.pain_points_deduplicated}</p>
-            </div>
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Errores</p>
-              <p className="text-2xl font-black text-rose-400">{batchStats.errors}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Procesados</p>
+                <p className="text-2xl font-black text-white">{batchStats.transcripts_processed}</p>
+              </div>
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Insights Nuevos</p>
+                <p className="text-2xl font-black text-emerald-400">{batchStats.pain_points_extracted}</p>
+              </div>
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Deduplicados</p>
+                <p className="text-2xl font-black text-amber-400">{batchStats.pain_points_deduplicated}</p>
+              </div>
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Errores</p>
+                <p className="text-2xl font-black text-rose-400">{batchStats.errors}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Search */}

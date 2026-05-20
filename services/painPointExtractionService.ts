@@ -48,6 +48,10 @@ export interface BatchExtractionStats {
   estimated_cost_usd: number;
   errors: number;
   model_used: string;
+  total_videos?: number;
+  eligible_videos?: number;
+  status?: string;
+  message?: string;
 }
 
 // ── System Prompt ───────────────────────────────────────────
@@ -370,6 +374,11 @@ export async function runPainPointExtractionBatch(
 
     if (!allTranscripts || allTranscripts.length === 0) {
       console.log('[PP-BATCH] No hay transcripts procesables.');
+      stats.status = 'no_new_videos';
+      stats.message = 'No hay transcripts disponibles en la base de datos con estado de éxito.';
+      stats.total_videos = 0;
+      stats.transcripts_skipped = 0;
+      stats.eligible_videos = 0;
       return { success: true, stats };
     }
 
@@ -399,8 +408,25 @@ export async function runPainPointExtractionBatch(
       .filter(t => !processedVideoIds.has(t.youtube_video_id))
       .slice(0, limit);
 
+    stats.total_videos = allTranscripts.length;
+    stats.transcripts_skipped = allTranscripts.length - pendingTranscripts.length;
+    stats.eligible_videos = pendingTranscripts.length;
+
     if (pendingTranscripts.length === 0) {
       console.log('[PP-BATCH] No hay transcripts pendientes de procesamiento (todos están procesados).');
+      stats.status = 'no_new_videos';
+      stats.message = 'Todos los videos disponibles ya fueron procesados previamente.';
+      
+      // Registrar log de evento "skipping" para observabilidad
+      await supabaseAdmin.from('extraction_logs').insert({
+        video_id: `batch_skipped`,
+        model_used: 'none',
+        tokens_used: 0,
+        cost_estimated: 0,
+        status: 'skipped',
+        error_message: 'BATCH_SKIPPED_NO_NEW_VIDEOS'
+      });
+
       return { success: true, stats };
     }
 
