@@ -1,6 +1,15 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // --- CONFIGURACIÓN DE ENTORNO SEGURA ---
+if (typeof process !== 'undefined' && process.env) {
+  try {
+    const dotenv = require('dotenv');
+    dotenv.config({ path: '.env.local' });
+  } catch (e) {
+    // ignored in browser environment
+  }
+}
+
 const getEnv = (name: string) => (typeof process !== 'undefined' ? process.env[name] : '') || '';
 
 const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL');

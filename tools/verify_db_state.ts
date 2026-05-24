@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { supabaseAdmin } from '../lib/supabaseClient';
 
 async function verify() {
