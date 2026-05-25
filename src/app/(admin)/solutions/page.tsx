@@ -21,7 +21,10 @@ import {
   Award,
   ShieldAlert,
   ArrowRight,
-  TrendingDown
+  TrendingDown,
+  Star,
+  History,
+  Hash
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -80,6 +83,18 @@ interface SolutionProposal {
   }[];
 }
 
+interface GenerationHistoryEntry {
+  id: string;
+  rpm_version: number;
+  criteria_hash: string;
+  rpm_snapshot: any;
+  solutions_generated: number;
+  solutions_snapshot: any[];
+  is_current: boolean;
+  generated_at: string;
+  invalidated_at: string | null;
+}
+
 export default function SolutionsPage() {
   const [solutions, setSolutions] = useState<SolutionProposal[]>([]);
   const [profile, setProfile] = useState<any>(null);
@@ -89,6 +104,10 @@ export default function SolutionsPage() {
   const [generationStep, setGenerationStep] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeTabs, setActiveTabs] = useState<Record<string, 'details' | 'score' | 'evidence'>>({});
+  const [selectedSolutionId, setSelectedSolutionId] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<GenerationHistoryEntry[]>([]);
 
   const fetchSolutions = async () => {
     setLoading(true);
@@ -114,8 +133,56 @@ export default function SolutionsPage() {
     }
   };
 
+  const fetchSelectedSolution = async () => {
+    try {
+      const res = await fetch('/api/solutions/select');
+      const data = await res.json();
+      if (data.success && data.selection) {
+        setSelectedSolutionId(data.selection.solution_id);
+      }
+    } catch (err) {
+      console.error('Error fetching selected solution:', err);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('/api/solutions/history');
+      const data = await res.json();
+      if (data.success) {
+        setHistory(data.history || []);
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    }
+  };
+
+  const handleSelectSolution = async (solutionId: string) => {
+    setSelecting(true);
+    try {
+      const res = await fetch('/api/solutions/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solution_id: solutionId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedSolutionId(solutionId);
+        alert('✅ Solución seleccionada. Proceso MVT iniciado automáticamente.');
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error al seleccionar: ${err.message}`);
+    } finally {
+      setSelecting(false);
+    }
+  };
+
   useEffect(() => {
     fetchSolutions();
+    fetchSelectedSolution();
+    fetchHistory();
   }, []);
 
   const handleGenerate = async () => {
@@ -145,6 +212,32 @@ export default function SolutionsPage() {
           tabs[sol.id] = 'details';
         });
         setActiveTabs(tabs);
+
+        // Registrar en historial de generaciones
+        if (data.profile) {
+          await fetch('/api/solutions/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rpm_profile_id: data.profile.id,
+              criteria_hash: data.profile.criteria_hash || '',
+              rpm_snapshot: {
+                profile_name: data.profile.profile_name,
+                capital_range: data.profile.capital_range,
+                archetype: data.profile.archetype,
+                rpm_score: data.profile.rpm_score
+              },
+              solutions_snapshot: (data.solutions || []).map((s: any) => ({
+                id: s.id,
+                title: s.title,
+                fit_score: s.fit_score,
+                difficulty_level: s.difficulty_level
+              })),
+              solutions_count: (data.solutions || []).length
+            })
+          });
+          fetchHistory();
+        }
       } else {
         alert(`Error al generar propuestas: ${data.error || 'Error desconocido'}`);
       }
@@ -440,6 +533,24 @@ export default function SolutionsPage() {
                           <span className="text-slate-500 font-bold text-xs uppercase">/ 100</span>
                         </div>
                       </div>
+
+                      {/* Seleccionar Solución Button */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSelectSolution(sol.id); }}
+                        disabled={selecting || selectedSolutionId === sol.id}
+                        className={clsx(
+                          "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shrink-0",
+                          selectedSolutionId === sol.id
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
+                            : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20"
+                        )}
+                      >
+                        {selectedSolutionId === sol.id ? (
+                          <><CheckCircle2 size={14} /> Seleccionada</>
+                        ) : (
+                          <><Star size={14} /> Seleccionar</>
+                        )}
+                      </button>
 
                       <div className="w-10 h-10 rounded-full bg-slate-800/50 hover:bg-slate-800 text-slate-300 flex items-center justify-center transition-colors">
                         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -768,6 +879,97 @@ export default function SolutionsPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* --- RPM PROFILE METADATA (Dinamismo) --- */}
+      {profile && (
+        <div className="glass-card p-6 border-slate-800/60 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Brain size={18} className="text-indigo-400" /> RPM Utilizado para Generación
+            </h3>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-400 transition-colors"
+            >
+              <History size={14} /> {showHistory ? 'Ocultar' : 'Ver'} Historial
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Perfil</span>
+              <span className="text-sm font-bold text-white">{profile.profile_name?.split(':')[1]?.trim() || 'Matias'}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Arquetipo</span>
+              <span className="text-sm font-bold text-indigo-300">{profile.archetype || 'Emprendedor'}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">RPM Score</span>
+              <span className="text-sm font-bold text-emerald-400">{profile.rpm_score || 0}/100</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Fecha Creación</span>
+              <span className="text-sm font-bold text-slate-300">{profile.created_at ? new Date(profile.created_at).toLocaleDateString() : '-'}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block flex items-center gap-1"><Hash size={10} /> Criteria Hash</span>
+              <span className="text-[10px] font-mono text-slate-400 break-all">{profile.criteria_hash || solutions[0]?.criteria_hash || '-'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- HISTORIAL DE GENERACIONES (Dinamismo RPM) --- */}
+      {showHistory && history.length > 0 && (
+        <div className="glass-card p-6 border-slate-800/60 space-y-4 animate-in slide-in-from-top duration-300">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <History size={18} className="text-amber-400" /> Historial de Generaciones
+          </h3>
+          <p className="text-sm text-slate-400">Cada vez que el RPM cambia, las propuestas anteriores se invalidan y se generan nuevas.</p>
+          <div className="space-y-3">
+            {history.map((entry, idx) => (
+              <div key={entry.id} className={clsx(
+                "p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4",
+                entry.is_current 
+                  ? "bg-indigo-600/10 border-indigo-500/30" 
+                  : "bg-slate-900/30 border-slate-800/50 opacity-70"
+              )}>
+                <div className="flex items-center gap-4">
+                  <div className={clsx(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-black",
+                    entry.is_current ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"
+                  )}>
+                    v{entry.rpm_version}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">
+                        {entry.solutions_generated} soluciones generadas
+                      </span>
+                      {entry.is_current && (
+                        <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full">Actual</span>
+                      )}
+                      {entry.invalidated_at && (
+                        <span className="text-[9px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full">Obsoleta</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {new Date(entry.generated_at).toLocaleString()} — Hash: {entry.criteria_hash?.slice(0, 12)}...
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {entry.solutions_snapshot?.slice(0, 4).map((s: any, i: number) => (
+                    <span key={i} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded-lg border border-slate-700/50">
+                      {s.title?.slice(0, 25) || `Sol ${i+1}`}... ({s.fit_score})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

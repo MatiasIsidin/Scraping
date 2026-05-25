@@ -29,7 +29,7 @@ const navItems = [
   { name: 'Pain Points', href: '/pain-points', icon: AlertCircle },
   { name: 'RPM Wizard', href: '/rpm', icon: Brain },
   { name: 'Solution Engine', href: '/solutions', icon: Zap },
-  { name: 'MVT Validation', href: '/mvt', icon: CheckCircle2, soon: true },
+  { name: 'MVT Validation', href: '/mvt', icon: CheckCircle2 },
 ];
 
 export function Sidebar() {
