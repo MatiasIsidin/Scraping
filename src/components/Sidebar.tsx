@@ -22,7 +22,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const navItems = [
+const navItems: { name: string; href: string; icon: typeof Terminal; soon?: boolean }[] = [
   { name: 'Logs Scraper', href: '/logs', icon: Terminal },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Videos', href: '/videos', icon: Video },
