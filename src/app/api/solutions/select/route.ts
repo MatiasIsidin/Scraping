@@ -11,30 +11,39 @@ import { supabaseAdmin } from '@lib/supabaseClient';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { solution_id } = body;
+    const { solution_id, solution_data } = body;
     const userId = 'Matias'; // En producción vendría de la sesión
 
     if (!solution_id) {
       return NextResponse.json({ success: false, error: 'solution_id es requerido' }, { status: 400 });
     }
 
-    // 1. Obtener la solución completa
-    const { data: solution, error: solError } = await supabaseAdmin
+    let solution: any = null;
+    let painPointTitle = 'Pain Point asociado';
+
+    // Intentar buscar en DB primero
+    const { data: dbSolution, error: solError } = await supabaseAdmin
       .from('solution_engine_outputs')
       .select('*')
       .eq('id', solution_id)
-      .single();
-
-    if (solError || !solution) {
-      return NextResponse.json({ success: false, error: 'Solución no encontrada' }, { status: 404 });
-    }
-
-    // 2. Obtener pain point asociado
-    const { data: painPoint } = await supabaseAdmin
-      .from('pain_points')
-      .select('title')
-      .eq('id', solution.matched_pain_point_id)
       .maybeSingle();
+
+    if (dbSolution) {
+      solution = dbSolution;
+      // Obtener pain point asociado
+      const { data: painPoint } = await supabaseAdmin
+        .from('pain_points')
+        .select('title')
+        .eq('id', solution.matched_pain_point_id)
+        .maybeSingle();
+      painPointTitle = painPoint?.title || 'Pain Point asociado';
+    } else if (solution_data) {
+      // Fallback: usar los datos enviados desde el frontend (para soluciones locales)
+      solution = solution_data;
+      painPointTitle = solution_data.pain_point?.title || 'Pain Point asociado';
+    } else {
+      return NextResponse.json({ success: false, error: 'Solución no encontrada en DB y no se proporcionaron datos.' }, { status: 404 });
+    }
 
     // 3. Desactivar selección previa del usuario
     await supabaseAdmin
@@ -55,9 +64,9 @@ export async function POST(request: Request) {
       .from('selected_solutions')
       .insert({
         user_id: userId,
-        solution_id: solution_id,
-        rpm_profile_id: solution.rpm_profile_id,
-        criteria_hash: solution.criteria_hash,
+        solution_id: dbSolution ? solution_id : null,
+        rpm_profile_id: solution.rpm_profile_id || null,
+        criteria_hash: solution.criteria_hash || 'local',
         proposal_version: solution.tracking_version || 1,
         selected_at: new Date().toISOString(),
         is_active: true
@@ -76,8 +85,8 @@ export async function POST(request: Request) {
       .insert({
         user_id: userId,
         selected_solution_id: selection.id,
-        solution_title: solution.title,
-        pain_point_title: painPoint?.title || 'Pain Point asociado',
+        solution_title: solution.title || 'Solución seleccionada',
+        pain_point_title: painPointTitle,
         fit_score: solution.fit_score || 0,
         selected_at: selection.selected_at,
         current_state: 'INMERSION',
@@ -114,7 +123,7 @@ export async function GET() {
 
     const { data: selection, error } = await supabaseAdmin
       .from('selected_solutions')
-      .select('*, solution_engine_outputs(*)')
+      .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
       .maybeSingle();

@@ -115,21 +115,60 @@ export default function SolutionsPage() {
       const res = await fetch('/api/solutions');
       const data = await res.json();
       if (data.success) {
-        setSolutions(data.solutions || []);
+        const fetchedSolutions = data.solutions || [];
+        setSolutions(fetchedSolutions);
         setProfile(data.profile);
         setIsOutdated(data.isOutdated);
         
+        // Guardar en localStorage para persistencia entre recargas
+        if (fetchedSolutions.length > 0) {
+          localStorage.setItem('cached_solutions', JSON.stringify(fetchedSolutions));
+          localStorage.setItem('cached_profile', JSON.stringify(data.profile));
+          localStorage.setItem('cached_isOutdated', JSON.stringify(data.isOutdated));
+        }
+        
         // Inicializar pestañas activas para cada card
         const tabs: Record<string, 'details' | 'score' | 'evidence'> = {};
-        data.solutions.forEach((sol: SolutionProposal) => {
+        fetchedSolutions.forEach((sol: SolutionProposal) => {
+          tabs[sol.id] = 'details';
+        });
+        setActiveTabs(tabs);
+      } else if (data.code === 'NO_PROFILE') {
+        // Sin perfil RPM, limpiar cache
+        setSolutions([]);
+        setProfile(null);
+      } else {
+        // Error del servidor - intentar cargar desde cache local
+        loadFromCache();
+      }
+    } catch (err) {
+      console.error('Error fetching solutions:', err);
+      // Fallback: cargar desde localStorage
+      loadFromCache();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFromCache = () => {
+    try {
+      const cached = localStorage.getItem('cached_solutions');
+      const cachedProfile = localStorage.getItem('cached_profile');
+      const cachedOutdated = localStorage.getItem('cached_isOutdated');
+      if (cached) {
+        const parsedSolutions = JSON.parse(cached);
+        setSolutions(parsedSolutions);
+        if (cachedProfile) setProfile(JSON.parse(cachedProfile));
+        if (cachedOutdated) setIsOutdated(JSON.parse(cachedOutdated));
+        
+        const tabs: Record<string, 'details' | 'score' | 'evidence'> = {};
+        parsedSolutions.forEach((sol: SolutionProposal) => {
           tabs[sol.id] = 'details';
         });
         setActiveTabs(tabs);
       }
-    } catch (err) {
-      console.error('Error fetching solutions:', err);
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.error('Error loading from cache:', e);
     }
   };
 
@@ -160,10 +199,23 @@ export default function SolutionsPage() {
   const handleSelectSolution = async (solutionId: string) => {
     setSelecting(true);
     try {
+      // Encontrar la solución completa para enviarla como fallback
+      const sol = solutions.find(s => s.id === solutionId);
       const res = await fetch('/api/solutions/select', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ solution_id: solutionId })
+        body: JSON.stringify({ 
+          solution_id: solutionId,
+          solution_data: sol ? {
+            title: sol.title,
+            fit_score: sol.fit_score,
+            rpm_profile_id: sol.rpm_profile_id,
+            criteria_hash: sol.criteria_hash,
+            tracking_version: sol.tracking_version,
+            matched_pain_point_id: sol.matched_pain_point_id,
+            pain_point: sol.pain_point
+          } : null
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -201,14 +253,20 @@ export default function SolutionsPage() {
       const res = await fetch('/api/solutions', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        setSolutions(data.solutions || []);
+        const newSolutions = data.solutions || [];
+        setSolutions(newSolutions);
         setProfile(data.profile);
         setIsOutdated(false);
         setExpandedId(null);
         
+        // Actualizar cache local
+        localStorage.setItem('cached_solutions', JSON.stringify(newSolutions));
+        localStorage.setItem('cached_profile', JSON.stringify(data.profile));
+        localStorage.setItem('cached_isOutdated', JSON.stringify(false));
+        
         // Inicializar pestañas
         const tabs: Record<string, 'details' | 'score' | 'evidence'> = {};
-        data.solutions.forEach((sol: SolutionProposal) => {
+        newSolutions.forEach((sol: SolutionProposal) => {
           tabs[sol.id] = 'details';
         });
         setActiveTabs(tabs);

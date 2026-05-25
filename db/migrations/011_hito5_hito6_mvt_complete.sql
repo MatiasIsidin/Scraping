@@ -6,9 +6,9 @@
 CREATE TABLE IF NOT EXISTS public.selected_solutions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
-    solution_id UUID NOT NULL REFERENCES public.solution_engine_outputs(id) ON DELETE CASCADE,
+    solution_id UUID REFERENCES public.solution_engine_outputs(id) ON DELETE CASCADE,
     rpm_profile_id UUID REFERENCES public.rpm_profiles(id) ON DELETE SET NULL,
-    criteria_hash TEXT NOT NULL,
+    criteria_hash TEXT NOT NULL DEFAULT 'local',
     proposal_version INTEGER DEFAULT 1,
     selected_at TIMESTAMPTZ DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE,
