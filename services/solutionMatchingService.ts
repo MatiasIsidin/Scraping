@@ -282,24 +282,20 @@ export class SolutionMatchingService {
 
       // 4.1 Capital Gatekeeper
       if (isTech && (availableCapital.includes('0-500') || availableCapital.includes('0-$500')) && pp.severity_score >= 8) {
-        console.warn(`[MATCHING-GATEKEEPER] Discarded pain point "${pp.title}" [ID: ${pp.id}]. Reason: GATEKEEPER_CAPITAL_FAIL (Insufficient capital for complex SaaS)`);
-        continue;
+        console.warn(`[MATCHING-GATEKEEPER] Warning: Capital bajo para SaaS complejo. Se penalizará en el Fit Score, pero no se descarta. "${pp.title}" [ID: ${pp.id}]`);
       }
 
       // 4.2 Time Gatekeeper
       if ((availableHours.includes('0-10') || availableHours.includes('10')) && pp.severity_score >= 8) {
-        console.warn(`[MATCHING-GATEKEEPER] Discarded pain point "${pp.title}" [ID: ${pp.id}]. Reason: GATEKEEPER_TIME_LIMIT (Insufficient hours for highly intensive project setup)`);
-        continue;
+        console.warn(`[MATCHING-GATEKEEPER] Warning: Horas insuficientes para proyecto intensivo. Se penalizará en el Fit Score, pero no se descarta. "${pp.title}" [ID: ${pp.id}]`);
       }
 
       // 4.3 Skills Gatekeeper
       if (isTech && techSkill < 3) {
-        console.warn(`[MATCHING-GATEKEEPER] Discarded pain point "${pp.title}" [ID: ${pp.id}]. Reason: GATEKEEPER_SKILLS_FAIL (Tech skill too low for SaaS development)`);
-        continue;
+        console.warn(`[MATCHING-GATEKEEPER] Warning: Habilidad técnica baja para SaaS. Se penalizará en el Fit Score, pero no se descarta. "${pp.title}" [ID: ${pp.id}]`);
       }
       if (!isTech && salesSkill < 2) {
-        console.warn(`[MATCHING-GATEKEEPER] Discarded pain point "${pp.title}" [ID: ${pp.id}]. Reason: GATEKEEPER_SKILLS_FAIL (Sales skill too low for physical outreach / operational business)`);
-        continue;
+        console.warn(`[MATCHING-GATEKEEPER] Warning: Habilidad de ventas baja. Se penalizará en el Fit Score, pero no se descarta. "${pp.title}" [ID: ${pp.id}]`);
       }
 
       // 4.4 Evidence Gatekeeper (Hito 5 rule: minimum 1 associated pain point, minimum 1 video associated)
@@ -307,8 +303,7 @@ export class SolutionMatchingService {
       const relatedVideoIds = Array.from(new Set(relatedClasses.map(c => c.youtube_video_id).filter(Boolean)));
 
       if (relatedVideoIds.length < 1) {
-        console.warn(`[MATCHING-GATEKEEPER] Discarded pain point "${pp.title}" [ID: ${pp.id}]. Reason: Candidate rejected: insufficient evidence (0 associated videos classified)`);
-        continue;
+        console.log(`[MATCHING-GATEKEEPER] Pain point "${pp.title}" [ID: ${pp.id}] no tiene videos. Se asume entrada manual y se permite el bypass de evidencia.`);
       }
 
       // 4.5 Candidate is valid! Apply detailed fit score scoring
