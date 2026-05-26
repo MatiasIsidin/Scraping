@@ -328,19 +328,27 @@ export class SolutionMatchingService {
 
     console.log(`[MATCHING] Matching determinista completo. Candidatos aprobados: ${matchedOpportunities.length}.`);
 
-    // 6. Apply Diversity Rule: Max 2 proposals per principal category
+    // 6. Apply Diversity Rule: Max 3 proposals per principal category, Max 2 high severity
     const selected: MatchedOpportunity[] = [];
     const categoryCounts: Record<string, number> = {};
+    let highSeverityCount = 0;
 
     for (const opt of matchedOpportunities) {
       if (selected.length >= 8) break; // Fetch more to have fallbacks
 
       const category = opt.pain_point.category || 'Otros';
       const count = categoryCounts[category] || 0;
+      const isHighSev = (opt.pain_point.severity_score || 0) >= 8;
+
+      if (isHighSev && highSeverityCount >= 2) {
+        console.log(`[MATCHING-DIVERSITY] Skipping high severity candidate "${opt.pain_point.title}" to preserve severity diversity (max 2).`);
+        continue;
+      }
 
       if (count < 3) { // Aumentado el límite por categoría a 3
         selected.push(opt);
         categoryCounts[category] = count + 1;
+        if (isHighSev) highSeverityCount++;
       } else {
         console.log(`[MATCHING-DIVERSITY] Skipping candidate "${opt.pain_point.title}" in category "${category}" to preserve diversity (already matched 3).`);
       }
