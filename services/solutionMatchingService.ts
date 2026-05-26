@@ -235,7 +235,7 @@ export class SolutionMatchingService {
 
     // 2. Check if solutions with same hash already exist
     const activeSolutions = await this.getExistingActiveSolutions(rpmProfile.id);
-    if (activeSolutions.length >= 6 && activeSolutions[0].criteria_hash === newHash) {
+    if (activeSolutions.length >= 10 && activeSolutions[0].criteria_hash === newHash) {
       console.log(`[MATCHING] ¡DYNAMIC BYPASS! El hash coincide. Reutilizando ${activeSolutions.length} propuestas vigentes.`);
       return {
         action: 'reuse',
@@ -334,30 +334,30 @@ export class SolutionMatchingService {
     let highSeverityCount = 0;
 
     for (const opt of matchedOpportunities) {
-      if (selected.length >= 8) break; // Fetch more to have fallbacks
+      if (selected.length >= 12) break; // Fetch more to have fallbacks (10 main + 2 fallback)
 
       const category = opt.pain_point.category || 'Otros';
       const count = categoryCounts[category] || 0;
       const isHighSev = (opt.pain_point.severity_score || 0) >= 8;
 
-      if (isHighSev && highSeverityCount >= 2) {
-        console.log(`[MATCHING-DIVERSITY] Skipping high severity candidate "${opt.pain_point.title}" to preserve severity diversity (max 2).`);
+      if (isHighSev && highSeverityCount >= 4) {
+        console.log(`[MATCHING-DIVERSITY] Skipping high severity candidate "${opt.pain_point.title}" to preserve severity diversity (max 4).`);
         continue;
       }
 
-      if (count < 3) { // Aumentado el límite por categoría a 3
+      if (count < 4) { // Aumentado el límite por categoría a 4 para soportar 10 soluciones
         selected.push(opt);
         categoryCounts[category] = count + 1;
         if (isHighSev) highSeverityCount++;
       } else {
-        console.log(`[MATCHING-DIVERSITY] Skipping candidate "${opt.pain_point.title}" in category "${category}" to preserve diversity (already matched 3).`);
+        console.log(`[MATCHING-DIVERSITY] Skipping candidate "${opt.pain_point.title}" in category "${category}" to preserve diversity (already matched 4).`);
       }
     }
 
-    // If we didn't fill the slots due to diversity filters, relax diversity to fill the top 8
-    if (selected.length < 6) {
+    // If we didn't fill the slots due to diversity filters, relax diversity to fill the top 12
+    if (selected.length < 10) {
       for (const opt of matchedOpportunities) {
-        if (selected.length >= 8) break;
+        if (selected.length >= 12) break;
         if (!selected.some(s => s.pain_point.id === opt.pain_point.id)) {
           selected.push(opt);
         }

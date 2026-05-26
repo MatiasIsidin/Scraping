@@ -52,19 +52,19 @@ export class SolutionGenerationService {
     if (action === 'reuse') {
       console.log(`[GENERATION] DYNAMIC BYPASS: Reutilizando propuestas activas existentes.`);
       const activeSolutions = await this.getExistingSolutions(rpmProfile.id);
-      if (activeSolutions.length >= 6) { // Aumentado a 6
+      if (activeSolutions.length >= 10) { // Aumentado a 10
         return activeSolutions;
       }
-      console.log(`[GENERATION] Alerta: Se solicitó reutilizar pero no hay al menos 6 soluciones activas. Forzando regeneración.`);
+      console.log(`[GENERATION] Alerta: Se solicitó reutilizar pero no hay al menos 10 soluciones activas. Forzando regeneración.`);
     }
 
-    // 2. Prepare candidates (Top 6, with 7th and 8th as fallback)
-    if (opportunities.length < 6) {
+    // 2. Prepare candidates (Top 10, with 11th and 12th as fallback)
+    if (opportunities.length < 10) {
       console.warn(`[GENERATION] Advertencia: Se encontraron solo ${opportunities.length} oportunidades elegibles. Procediendo.`);
     }
 
-    const activeOpportunities = opportunities.slice(0, 6); // Usar hasta 6 principales
-    const fallbackOpportunity = opportunities.length >= 7 ? opportunities[6] : null;
+    const activeOpportunities = opportunities.slice(0, 10); // Usar hasta 10 principales
+    const fallbackOpportunity = opportunities.length >= 11 ? opportunities[10] : null;
 
     console.log(`[GENERATION] Iniciando llamadas paralelas para ${activeOpportunities.length} candidatos principales. Candidato fallback disponible: ${fallbackOpportunity ? 'SÍ' : 'NO'}`);
 
@@ -82,9 +82,9 @@ export class SolutionGenerationService {
     const results = await Promise.all(generationPromises);
     const successfulSolutions: SolutionProposal[] = results.filter((s): s is SolutionProposal => s !== null);
 
-    // 4. Fallback execution if any of the main 6 failed
-    if (successfulSolutions.length < 6 && fallbackOpportunity) {
-      const missingCount = 6 - successfulSolutions.length;
+    // 4. Fallback execution if any of the main 10 failed
+    if (successfulSolutions.length < 10 && fallbackOpportunity) {
+      const missingCount = 10 - successfulSolutions.length;
       console.log(`[GENERATION-FAILOVER] Fallaron ${missingCount} candidatos. Intentando generar con el candidato fallback...`);
       try {
         const fallbackSolution = await this.generateSingleSolutionWithRetry(rpmProfile, fallbackOpportunity, model, 1);
