@@ -235,7 +235,7 @@ export class SolutionMatchingService {
 
     // 2. Check if solutions with same hash already exist
     const activeSolutions = await this.getExistingActiveSolutions(rpmProfile.id);
-    if (activeSolutions.length > 0 && activeSolutions[0].criteria_hash === newHash) {
+    if (activeSolutions.length >= 6 && activeSolutions[0].criteria_hash === newHash) {
       console.log(`[MATCHING] ¡DYNAMIC BYPASS! El hash coincide. Reutilizando ${activeSolutions.length} propuestas vigentes.`);
       return {
         action: 'reuse',
