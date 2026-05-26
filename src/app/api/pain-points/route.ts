@@ -40,3 +40,45 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+
+/**
+ * POST /api/pain-points
+ * Crea un nuevo pain point manualmente.
+ */
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { title, description, category, severity_score } = body;
+
+    if (!title || !description) {
+      return NextResponse.json({ success: false, error: 'Title and description are required' }, { status: 400 });
+    }
+
+    const newPainPoint = {
+      title,
+      description,
+      category: category || 'General',
+      severity_score: parseInt(severity_score) || 5,
+      frequency_score: 1,
+      recency_score: 10,
+      final_score: parseInt(severity_score) || 5,
+      is_active: true,
+      market_segment: 'General'
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('pain_points')
+      .insert([newPainPoint])
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data });
+
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}

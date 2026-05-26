@@ -47,6 +47,10 @@ export default function PainPointsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
+  // Create Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newForm, setNewForm] = useState({ title: '', description: '', category: '', severity_score: 5 });
+
   const fetchPainPoints = async () => {
     setLoading(true);
     try {
@@ -111,6 +115,23 @@ export default function PainPointsPage() {
     }
   };
 
+  const handleCreate = async () => {
+    try {
+      const res = await fetch('/api/pain-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newForm)
+      });
+      if (res.ok) {
+        setIsCreateModalOpen(false);
+        setNewForm({ title: '', description: '', category: '', severity_score: 5 });
+        fetchPainPoints();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header */}
@@ -121,7 +142,10 @@ export default function PainPointsPage() {
           </h1>
           <p className="text-slate-400 mt-2 font-medium">Plataforma de inteligencia de mercado y generador de oportunidades LATAM.</p>
         </div>
-        <button className="flex items-center gap-3 bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95">
+        <button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-3 bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95"
+        >
           <Plus size={20} /> Nuevo Insight
         </button>
       </div>
@@ -383,6 +407,84 @@ export default function PainPointsPage() {
           Siguiente <ChevronRight size={16} />
         </button>
       </div>
+
+      {/* Create Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6">
+            <h2 className="text-2xl font-bold text-white">Nuevo Insight</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Título</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  value={newForm.title}
+                  onChange={(e) => setNewForm({...newForm, title: e.target.value})}
+                  placeholder="Ej: Falta de digitalización en inventarios..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Descripción</label>
+                <textarea 
+                  rows={3}
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  value={newForm.description}
+                  onChange={(e) => setNewForm({...newForm, description: e.target.value})}
+                  placeholder="Detalles del dolor..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Categoría</label>
+                  <select
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    value={newForm.category}
+                    onChange={(e) => setNewForm({...newForm, category: e.target.value})}
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Fintech">Fintech</option>
+                    <option value="SaaS">SaaS</option>
+                    <option value="E-commerce">E-commerce</option>
+                    <option value="Logística">Logística</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Severidad (1-10)</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    max="10"
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    value={newForm.severity_score}
+                    onChange={(e) => setNewForm({...newForm, severity_score: parseInt(e.target.value) || 5})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800/50">
+              <button 
+                onClick={() => setIsCreateModalOpen(false)}
+                className="px-6 py-2.5 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleCreate}
+                disabled={!newForm.title || !newForm.description}
+                className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 transition-colors shadow-lg shadow-indigo-600/20"
+              >
+                Crear Insight
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
