@@ -323,8 +323,13 @@ export class SolutionMatchingService {
       });
     }
 
-    // 5. Rank Opportunities by Fit Score descending
-    matchedOpportunities.sort((a, b) => b.fit.fit_score - a.fit.fit_score);
+    // 5. Rank Opportunities by Fit Score + Severity Bonus
+    // Se agrega un pequeño bono por severidad para priorizarlos probabilísticamente sin forzarlos
+    matchedOpportunities.sort((a, b) => {
+      const scoreA = a.fit.fit_score + ((a.pain_point.severity_score || 0) * 1.5);
+      const scoreB = b.fit.fit_score + ((b.pain_point.severity_score || 0) * 1.5);
+      return scoreB - scoreA;
+    });
 
     console.log(`[MATCHING] Matching determinista completo. Candidatos aprobados: ${matchedOpportunities.length}.`);
 
@@ -333,23 +338,23 @@ export class SolutionMatchingService {
     const categoryCounts: Record<string, number> = {};
 
     for (const opt of matchedOpportunities) {
-      if (selected.length >= 5) break; // Fetch a few more to have fallbacks in case LLM fails
+      if (selected.length >= 8) break; // Fetch more to have fallbacks
 
       const category = opt.pain_point.category || 'Otros';
       const count = categoryCounts[category] || 0;
 
-      if (count < 2) {
+      if (count < 3) { // Aumentado el límite por categoría a 3
         selected.push(opt);
         categoryCounts[category] = count + 1;
       } else {
-        console.log(`[MATCHING-DIVERSITY] Skipping candidate "${opt.pain_point.title}" in category "${category}" to preserve diversity (already matched 2).`);
+        console.log(`[MATCHING-DIVERSITY] Skipping candidate "${opt.pain_point.title}" in category "${category}" to preserve diversity (already matched 3).`);
       }
     }
 
-    // If we didn't fill the slots due to diversity filters, relax diversity to fill the top 5
-    if (selected.length < 4) {
+    // If we didn't fill the slots due to diversity filters, relax diversity to fill the top 8
+    if (selected.length < 6) {
       for (const opt of matchedOpportunities) {
-        if (selected.length >= 5) break;
+        if (selected.length >= 8) break;
         if (!selected.some(s => s.pain_point.id === opt.pain_point.id)) {
           selected.push(opt);
         }

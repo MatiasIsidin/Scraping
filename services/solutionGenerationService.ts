@@ -52,21 +52,21 @@ export class SolutionGenerationService {
     if (action === 'reuse') {
       console.log(`[GENERATION] DYNAMIC BYPASS: Reutilizando propuestas activas existentes.`);
       const activeSolutions = await this.getExistingSolutions(rpmProfile.id);
-      if (activeSolutions.length >= 4) {
+      if (activeSolutions.length >= 6) { // Aumentado a 6
         return activeSolutions;
       }
-      console.log(`[GENERATION] Alerta: Se solicitó reutilizar pero no hay al menos 4 soluciones activas. Forzando regeneración.`);
+      console.log(`[GENERATION] Alerta: Se solicitó reutilizar pero no hay al menos 6 soluciones activas. Forzando regeneración.`);
     }
 
-    // 2. Prepare candidates (Top 4, with 5th as fallback)
-    if (opportunities.length < 4) {
+    // 2. Prepare candidates (Top 6, with 7th and 8th as fallback)
+    if (opportunities.length < 6) {
       console.warn(`[GENERATION] Advertencia: Se encontraron solo ${opportunities.length} oportunidades elegibles. Procediendo.`);
     }
 
-    const activeOpportunities = opportunities.slice(0, 4);
-    const fallbackOpportunity = opportunities.length >= 5 ? opportunities[4] : null;
+    const activeOpportunities = opportunities.slice(0, 6); // Usar hasta 6 principales
+    const fallbackOpportunity = opportunities.length >= 7 ? opportunities[6] : null;
 
-    console.log(`[GENERATION] Iniciando llamadas paralelas para ${activeOpportunities.length} candidatos principales. Candidato 5 como fallback: ${fallbackOpportunity ? 'SÍ' : 'NO'}`);
+    console.log(`[GENERATION] Iniciando llamadas paralelas para ${activeOpportunities.length} candidatos principales. Candidato fallback disponible: ${fallbackOpportunity ? 'SÍ' : 'NO'}`);
 
     const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
 
@@ -82,15 +82,15 @@ export class SolutionGenerationService {
     const results = await Promise.all(generationPromises);
     const successfulSolutions: SolutionProposal[] = results.filter((s): s is SolutionProposal => s !== null);
 
-    // 4. Fallback execution if any of the main 4 failed
-    if (successfulSolutions.length < 4 && fallbackOpportunity) {
-      const missingCount = 4 - successfulSolutions.length;
-      console.log(`[GENERATION-FAILOVER] Fallaron ${missingCount} candidatos. Intentando generar con el candidato 5 (Fallback)...`);
+    // 4. Fallback execution if any of the main 6 failed
+    if (successfulSolutions.length < 6 && fallbackOpportunity) {
+      const missingCount = 6 - successfulSolutions.length;
+      console.log(`[GENERATION-FAILOVER] Fallaron ${missingCount} candidatos. Intentando generar con el candidato fallback...`);
       try {
         const fallbackSolution = await this.generateSingleSolutionWithRetry(rpmProfile, fallbackOpportunity, model, 1);
         if (fallbackSolution) {
           successfulSolutions.push(fallbackSolution);
-          console.log(`[GENERATION-FAILOVER] Candidato 5 (Fallback) generado con éxito.`);
+          console.log(`[GENERATION-FAILOVER] Candidato fallback generado con éxito.`);
         }
       } catch (err: any) {
         console.error(`[GENERATION-FAILOVER] Error al generar candidato de fallback: ${err.message}`);
