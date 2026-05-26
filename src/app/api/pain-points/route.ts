@@ -63,7 +63,8 @@ export async function POST(request: Request) {
       recency_score: 10,
       final_score: parseInt(severity_score) || 5,
       is_active: true,
-      market_segment: 'General'
+      market_segment: 'General',
+      version: 'v1'
     };
 
     const { data, error } = await supabaseAdmin
