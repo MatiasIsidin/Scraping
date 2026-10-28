@@ -1,4 +1,4 @@
-apify-client>=1.6.0
+apify-client>=1.6.0,<3
 supabase>=2.3.4
 openai>=1.14.0
 python-dotenv>=1.0.1

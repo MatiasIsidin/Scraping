@@ -19,7 +19,7 @@ APIFY_TOKEN = os.getenv("APIFY_API_TOKEN")
 SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
 
-APIFY_ACTOR = "apify/youtube-scraper" # Placeholder exacto de Apify a utilizar
+APIFY_ACTOR = "johnvc/YoutubeTranscripts" # Placeholder exacto de Apify a utilizar
 CHANNEL_URL = "https://www.youtube.com/@StarterStory"
 
 TMP_DIR = os.path.join(os.getcwd(), ".tmp")
@@ -43,10 +43,11 @@ def fetch_videos_from_apify(client: ApifyClient, max_items=5) -> list:
     logger.info(f"Iniciando extracción con Apify Actor:'{APIFY_ACTOR}' Endpoint:'{CHANNEL_URL}'")
     
     run_input = {
-        "startUrls": [{"url": CHANNEL_URL}],
-        "maxResults": max_items,
-        "maxResultsShorts": 0,
-        "downloadSubtitles": True
+        "channel": CHANNEL_URL,
+        "max_videos": max_items,
+        "channel_transcripts": True,
+        "output_formats": ["text"],
+        "include_extended_metadata": True
     }
     
     # Requirement: 3 reintentos en caso de timeout
@@ -56,7 +57,8 @@ def fetch_videos_from_apify(client: ApifyClient, max_items=5) -> list:
             logger.info(f"Aguardando respuesta del servidor de Apify (Intento {attempt+1})...")
             run = client.actor(APIFY_ACTOR).call(run_input=run_input, timeout_secs=300)
             dataset_id = run.get("defaultDatasetId")
-            items = [item for item in client.dataset(dataset_id).iterate_items()]
+            # Las filas "channel_video" son solo el listado; el mismo video llega otra vez con su transcript
+            items = [item for item in client.dataset(dataset_id).iterate_items() if item.get("result_type") != "channel_video"]
             logger.info(f"Extracción exitosa. {len(items)} items/videos devueltos.")
             return items
         except Exception as e:
@@ -82,7 +84,7 @@ def upsert_to_supabase(supabase: Client, items: list):
     
     for item in items:
         # 1. Check Primary Key Existente
-        video_id = item.get("id") or item.get("videoId")
+        video_id = item.get("id") or item.get("videoId") or item.get("video_id")
         if not video_id:
             logger.warning("Video omitido: Ausencia de ID válido (youtube_video_id) en el Dataset.")
             continue
@@ -93,12 +95,12 @@ def upsert_to_supabase(supabase: Client, items: list):
         if not transcript:
             logger.info(f"Video '{video_id}' carece de transcript. Guardado como string vacío per SOP.")
             
-        published_at = item.get("date") or datetime.now(timezone.utc).isoformat()
+        published_at = item.get("date") or item.get("upload_date") or datetime.now(timezone.utc).isoformat()
         
         # Tabla Primaria: Entidades Estáticas e Identidad (UPSERT ready)
         raw_videos.append({
             "youtube_video_id": video_id,
-            "channel_id": item.get("channelId", "UknownStarterStoryID"),
+            "channel_id": item.get("channelId") or item.get("channel_id") or "UknownStarterStoryID",
             "title": item.get("title", ""),
             "description": item.get("description", ""),
             "url": item.get("url", f"https://www.youtube.com/watch?v={video_id}"),
@@ -126,8 +128,8 @@ def upsert_to_supabase(supabase: Client, items: list):
         snapshots.append({
             "snapshot_id": str(uuid.uuid4()),
             "youtube_video_id": video_id,
-            "view_count": safe_int(item.get("viewCount")),
-            "like_count": safe_int(item.get("likeCount")),
+            "view_count": safe_int(item.get("viewCount") or item.get("view_count")),
+            "like_count": safe_int(item.get("likeCount") or item.get("like_count")),
             "comment_count": safe_int(item.get("commentCount")),
             "scraped_at": datetime.now(timezone.utc).isoformat()
         })
